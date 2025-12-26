@@ -14,6 +14,12 @@ if ENVIRONMENT == "prod":
 else:
     N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook-test/whatsappout"
 
+# רשימת מספרי טלפון לקבלת תשובה עם 3 אפשרויות
+SPECIAL_PHONE_NUMBERS = [
+    "972542202468",
+    # הוסף כאן מספרי טלפון נוספים
+]
+
 # Enable CORS to allow external requests
 app.add_middleware(
     CORSMiddleware,
@@ -39,16 +45,50 @@ def get_info():
         "n8n_webhook_url": N8N_WEBHOOK_URL
     }
 
-@app.post("/whatsapp")
-async def receive_whatsapp(request: Request):
+@app.post("/whatsapp/get_message")
+async def get_message(request: Request):
+    """
+    מקבל הודעת WhatsApp נכנסת ומטפל בה
+    """
     data = await request.json()
     print("Incoming WhatsApp message:")
     print(data)
 
+    # חילוץ מספר הטלפון מהבקשה
+    phone_number = data.get("from") or data.get("phone_number") or data.get("phone") or data.get("sender")
+    
+    # בדיקה אם המספר ברשימה המיוחדת
+    if phone_number and phone_number in SPECIAL_PHONE_NUMBERS:
+        # התחלת תהליך בחירה בין האפשרויות
+        _start_choice_process(phone_number)
+
     return {"status": "ok"}
 
-@app.post("/what6")
-def send_whatsapp():
+
+def _start_choice_process(phone_number: str):
+    """
+    מתחיל תהליך בחירה בין 3 אפשרויות למספר טלפון מיוחד
+    """
+    response_text = "אנא בחר אחת מהאפשרויות:\nא. אפשרות א\nב. אפשרות ב\nג. אפשרות ג"
+    
+    # שליחת התשובה דרך N8N
+    payload = {
+        "to": phone_number,
+        "text": response_text
+    }
+    
+    try:
+        r = requests.post(N8N_WEBHOOK_URL, json=payload)
+        print(f"Sent special response to {phone_number}, status: {r.status_code}")
+    except Exception as e:
+        print(f"Error sending response: {e}")
+
+
+@app.post("/whatsapp/send_message")
+def send_message():
+    """
+    שולח הודעת WhatsApp דרך N8N
+    """
     payload = {
         "to": "972542202468",
         "text": "הודעה ישירות דרך n8n"
