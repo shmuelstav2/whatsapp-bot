@@ -1,8 +1,18 @@
+import os
 import requests
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Get environment mode (default to 'test' if not set)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "test").lower()
+
+# Set N8N webhook URL based on environment
+if ENVIRONMENT == "prod":
+    N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook/whatsappout"
+else:
+    N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook-test/whatsappout"
 
 # Enable CORS to allow external requests
 app.add_middleware(
@@ -19,7 +29,15 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "environment": ENVIRONMENT}
+
+@app.get("/info")
+def get_info():
+    return {
+        "status": "ok",
+        "environment": ENVIRONMENT,
+        "n8n_webhook_url": N8N_WEBHOOK_URL
+    }
 
 @app.post("/whatsapp")
 async def receive_whatsapp(request: Request):
@@ -28,8 +46,6 @@ async def receive_whatsapp(request: Request):
     print(data)
 
     return {"status": "ok"}
-
-N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook-test/whatsappout"
 
 @app.post("/what6")
 def send_whatsapp():
@@ -42,6 +58,8 @@ def send_whatsapp():
 
     return {
         "status": "sent",
+        "environment": ENVIRONMENT,
+        "n8n_webhook_url": N8N_WEBHOOK_URL,
         "n8n_status": r.status_code,
         "n8n_response": r.text
     }

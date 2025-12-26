@@ -1,0 +1,31 @@
+module.exports = {
+  apps: [
+    {
+      name: 'whatsapp-bot-test',
+      script: 'uvicorn',
+      args: 'main:app --host 0.0.0.0 --port 8000',
+      interpreter: 'python3',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        ENVIRONMENT: 'test'
+      }
+    },
+    {
+      name: 'whatsapp-bot-prod',
+      script: 'uvicorn',
+      args: 'main:app --host 0.0.0.0 --port 8001 --workers 4',
+      interpreter: 'python3',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        ENVIRONMENT: 'prod'
+      }
+    }
+  ]
+};
+
