@@ -66,7 +66,32 @@ async def get_message(request: Request):
     print("=" * 50)
 
     # חילוץ מספר הטלפון מהבקשה
-    phone_number = data.get("from") or data.get("phone_number") or data.get("phone") or data.get("sender")
+    # המבנה של WhatsApp: body['entry'][0]['changes'][0]['value']['messages'][0]['from']
+    phone_number = None
+    
+    # ניסיון לחלץ מהמבנה של WhatsApp Business API
+    try:
+        if "body" in data:
+            body = data["body"]
+            if "entry" in body and len(body["entry"]) > 0:
+                entry = body["entry"][0]
+                if "changes" in entry and len(entry["changes"]) > 0:
+                    changes = entry["changes"][0]
+                    if "value" in changes:
+                        value = changes["value"]
+                        # ניסיון מההודעות
+                        if "messages" in value and len(value["messages"]) > 0:
+                            phone_number = value["messages"][0].get("from")
+                        # ניסיון מהקontacts
+                        if not phone_number and "contacts" in value and len(value["contacts"]) > 0:
+                            phone_number = value["contacts"][0].get("wa_id")
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"DEBUG: Error extracting phone from WhatsApp structure: {e}")
+    
+    # ניסיון חילוץ מהשדות הישירים (למקרה שהמבנה שונה)
+    if not phone_number:
+        phone_number = data.get("from") or data.get("phone_number") or data.get("phone") or data.get("sender")
+    
     print(f"DEBUG: Extracted phone_number: '{phone_number}'")
     print(f"DEBUG: SPECIAL_PHONE_NUMBERS list: {SPECIAL_PHONE_NUMBERS}")
     
