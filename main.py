@@ -6,13 +6,22 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 # Get environment mode (default to 'test' if not set)
-ENVIRONMENT = os.getenv("ENVIRONMENT", "test").lower()
+env_raw = os.getenv("ENVIRONMENT", "test")
+ENVIRONMENT = env_raw.strip().lower() if env_raw else "test"
+
+# Debug: print raw environment variable
+print(f"DEBUG: ENVIRONMENT raw value: '{env_raw}'")
+print(f"DEBUG: ENVIRONMENT processed value: '{ENVIRONMENT}'")
 
 # Set N8N webhook URL based on environment
 if ENVIRONMENT == "prod":
     N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook/whatsappout"
 else:
     N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook-test/whatsappout"
+
+# Print environment info at startup
+print(f"Starting WhatsApp Bot in '{ENVIRONMENT}' mode")
+print(f"N8N Webhook URL: {N8N_WEBHOOK_URL}")
 
 # רשימת מספרי טלפון לקבלת תשובה עם 3 אפשרויות
 SPECIAL_PHONE_NUMBERS = [
