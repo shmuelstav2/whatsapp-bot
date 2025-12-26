@@ -79,9 +79,12 @@ async def get_message(request: Request):
                     changes = entry["changes"][0]
                     if "value" in changes:
                         value = changes["value"]
-                        # ניסיון מההודעות
+                        # ניסיון מההודעות (incoming messages)
                         if "messages" in value and len(value["messages"]) > 0:
                             phone_number = value["messages"][0].get("from")
+                        # ניסיון מ-statuses (read/delivered status)
+                        if not phone_number and "statuses" in value and len(value["statuses"]) > 0:
+                            phone_number = value["statuses"][0].get("recipient_id")
                         # ניסיון מהקontacts
                         if not phone_number and "contacts" in value and len(value["contacts"]) > 0:
                             phone_number = value["contacts"][0].get("wa_id")
@@ -95,8 +98,27 @@ async def get_message(request: Request):
     print(f"DEBUG: Extracted phone_number: '{phone_number}'")
     print(f"DEBUG: SPECIAL_PHONE_NUMBERS list: {SPECIAL_PHONE_NUMBERS}")
     
+    # בדיקה אם זו הודעת טקסט או רק status update
+    has_message = False
+    try:
+        if "body" in data:
+            body = data["body"]
+            if "entry" in body and len(body["entry"]) > 0:
+                entry = body["entry"][0]
+                if "changes" in entry and len(entry["changes"]) > 0:
+                    changes = entry["changes"][0]
+                    if "value" in changes:
+                        value = changes["value"]
+                        # בדיקה אם יש הודעת טקסט (לא רק status)
+                        if "messages" in value and len(value["messages"]) > 0:
+                            has_message = True
+    except (KeyError, IndexError, TypeError):
+        pass
+    
+    print(f"DEBUG: has_message: {has_message}")
+    
     # נורמליזציה של מספר הטלפון (הסרת רווחים, +, וכו')
-    if phone_number:
+    if phone_number and has_message:
         phone_number_normalized = phone_number.replace(" ", "").replace("-", "").replace("+", "")
         print(f"DEBUG: Normalized phone_number: '{phone_number_normalized}'")
         
@@ -107,6 +129,8 @@ async def get_message(request: Request):
             _start_choice_process(phone_number)
         else:
             print(f"DEBUG: Phone number {phone_number} NOT in SPECIAL_PHONE_NUMBERS")
+    elif phone_number and not has_message:
+        print("DEBUG: Phone number found but this is a status update, not a text message - skipping")
     else:
         print("DEBUG: No phone number found in message data")
 
