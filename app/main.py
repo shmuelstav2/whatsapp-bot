@@ -51,6 +51,14 @@ async def get_message(request: Request):
     print("Incoming WhatsApp message:")
     print(data)
     print("=" * 50)
+    
+    # הדפסת המבנה המלא של הנתונים
+    try:
+        import json
+        print("DEBUG: Full data structure (JSON):")
+        print(json.dumps(data, indent=2, default=str, ensure_ascii=False))
+    except Exception as e:
+        print(f"DEBUG: Could not print JSON: {e}")
 
     # חילוץ מספר הטלפון מהבקשה
     # המבנה של WhatsApp: body['entry'][0]['changes'][0]['value']['messages'][0]['from']
@@ -94,29 +102,63 @@ async def get_message(request: Request):
     has_message = False
     has_status = False
     try:
+        print("DEBUG: Checking data structure...")
+        print(f"DEBUG: data has 'body' key: {'body' in data}")
         if "body" in data:
             body = data["body"]
+            print(f"DEBUG: body type: {type(body)}")
+            print(f"DEBUG: body keys: {body.keys() if isinstance(body, dict) else 'not a dict'}")
             if "entry" in body and len(body["entry"]) > 0:
                 entry = body["entry"][0]
+                print(f"DEBUG: entry keys: {entry.keys() if isinstance(entry, dict) else 'not a dict'}")
                 if "changes" in entry and len(entry["changes"]) > 0:
                     changes = entry["changes"][0]
+                    print(f"DEBUG: changes keys: {changes.keys() if isinstance(changes, dict) else 'not a dict'}")
                     if "value" in changes:
                         value = changes["value"]
+                        print(f"DEBUG: value type: {type(value)}")
                         print(f"DEBUG: value keys: {value.keys() if isinstance(value, dict) else 'not a dict'}")
+                        
+                        # הדפסת התוכן המלא של value
+                        print("DEBUG: Full value content:")
+                        try:
+                            import json
+                            print(json.dumps(value, indent=2, default=str, ensure_ascii=False))
+                        except:
+                            print(str(value))
+                        
                         # בדיקה אם יש הודעת טקסט (לא רק status)
                         if "messages" in value and len(value["messages"]) > 0:
                             has_message = True
                             messages = value["messages"]
-                            print(f"DEBUG: ✓ Found {len(messages)} message(s) in value")
+                            print(f"DEBUG: ✓✓✓ Found {len(messages)} message(s) in value")
                             # הדפסת פרטי ההודעה הראשונה
                             if len(messages) > 0:
                                 first_msg = messages[0]
                                 print(f"DEBUG: First message type: {first_msg.get('type', 'unknown')}")
                                 print(f"DEBUG: First message keys: {first_msg.keys() if isinstance(first_msg, dict) else 'not a dict'}")
+                                print(f"DEBUG: First message content:")
+                                try:
+                                    print(json.dumps(first_msg, indent=2, default=str, ensure_ascii=False))
+                                except:
+                                    print(str(first_msg))
+                        else:
+                            print("DEBUG: ✗ No 'messages' key in value or messages list is empty")
+                        
                         # בדיקה אם יש status
                         if "statuses" in value and len(value["statuses"]) > 0:
                             has_status = True
                             print(f"DEBUG: Found statuses in value, count: {len(value['statuses'])}")
+                        else:
+                            print("DEBUG: ✗ No 'statuses' key in value or statuses list is empty")
+                    else:
+                        print("DEBUG: ✗ No 'value' key in changes")
+                else:
+                    print("DEBUG: ✗ No 'changes' in entry or changes list is empty")
+            else:
+                print("DEBUG: ✗ No 'entry' in body or entry list is empty")
+        else:
+            print("DEBUG: ✗ No 'body' key in data")
     except (KeyError, IndexError, TypeError) as e:
         print(f"DEBUG: Error checking has_message: {e}")
         import traceback
