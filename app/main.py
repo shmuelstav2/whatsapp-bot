@@ -127,12 +127,21 @@ async def get_message(request: Request):
 def _start_choice_process(phone_number: str):
     """
     מתחיל תהליך בחירה בין 3 אפשרויות למספר טלפון מיוחד
+    שולח הודעת Interactive Message עם 3 כפתורי בחירה
     """
-    response_text = "אנא בחר אחת מהאפשרויות:\nא. אפשרות א\nב. אפשרות ב\nג. אפשרות ג"
+    body_text = "אנא בחר אחת מהאפשרויות:"
     
-    # שליחת התשובה דרך שירות WhatsApp
-    result = whatsapp_service.send_message(phone_number, response_text)
-    print(f"Sent special response to {phone_number}, status: {result.get('status_code', 'N/A')}")
+    # שליחת הודעת Interactive עם כפתורי בחירה
+    result = whatsapp_service.send_interactive_message(
+        phone_number=phone_number,
+        body_text=body_text,
+        options=[
+            {"id": "option_a", "title": "א. אפשרות א"},
+            {"id": "option_b", "title": "ב. אפשרות ב"},
+            {"id": "option_c", "title": "ג. אפשרות ג"}
+        ]
+    )
+    print(f"Sent interactive message to {phone_number}, status: {result.get('status_code', 'N/A')}")
 
 
 @app.post("/whatsapp/send_message")

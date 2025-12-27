@@ -26,7 +26,7 @@ class WhatsAppService:
     
     def send_message(self, phone_number: str, text: str) -> dict:
         """
-        שולח הודעת WhatsApp
+        שולח הודעת WhatsApp טקסט רגילה
         
         Args:
             phone_number: מספר הטלפון של הנמען
@@ -65,6 +65,83 @@ class WhatsAppService:
                 "error": str(e),
                 "phone_number": phone_number,
                 "message_text": text
+            }
+    
+    def send_interactive_message(self, phone_number: str, body_text: str, 
+                                 options=None) -> dict:
+        """
+        שולח הודעת WhatsApp Interactive עם כפתורי בחירה
+        
+        Args:
+            phone_number: מספר הטלפון של הנמען
+            body_text: הטקסט הראשי של ההודעה
+            options: רשימה של אפשרויות. כל אפשרות היא dict עם:
+                    - "id": מזהים ייחודיים (למשל "option_a")
+                    - "title": טקסט הכפתור (למשל "א. אפשרות א")
+                    אם לא מסופק, ישתמש ב-3 אפשרויות ברירת מחדל
+            
+        Returns:
+            dict עם פרטי התגובה מהשרת
+        """
+        # אפשרויות ברירת מחדל
+        if options is None:
+            options = [
+                {"id": "option_a", "title": "א. אפשרות א"},
+                {"id": "option_b", "title": "ב. אפשרות ב"},
+                {"id": "option_c", "title": "ג. אפשרות ג"}
+            ]
+        
+        # בניית כפתורים
+        buttons = []
+        for option in options:
+            buttons.append({
+                "type": "reply",
+                "reply": {
+                    "id": option["id"],
+                    "title": option["title"]
+                }
+            })
+        
+        # בניית payload ל-Interactive Message
+        payload = {
+            "to": phone_number,
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {
+                    "text": body_text
+                },
+                "action": {
+                    "buttons": buttons
+                }
+            }
+        }
+        
+        print(f"DEBUG: Sending WhatsApp interactive message to {phone_number}")
+        print(f"DEBUG: Payload: {payload}")
+        print(f"DEBUG: N8N Webhook URL: {self.n8n_webhook_url}")
+        
+        try:
+            response = requests.post(self.n8n_webhook_url, json=payload)
+            print(f"DEBUG: Response status: {response.status_code}")
+            print(f"DEBUG: Response text: {response.text}")
+            
+            return {
+                "status": "sent" if response.status_code == 200 else "error",
+                "status_code": response.status_code,
+                "response_text": response.text,
+                "phone_number": phone_number,
+                "message_type": "interactive"
+            }
+        except Exception as e:
+            print(f"ERROR: Error sending WhatsApp interactive message: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "status": "error",
+                "error": str(e),
+                "phone_number": phone_number,
+                "message_type": "interactive"
             }
     
     def get_webhook_url(self) -> str:
