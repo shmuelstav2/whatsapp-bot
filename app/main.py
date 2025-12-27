@@ -1,27 +1,14 @@
-import os
-import requests
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.whatsapp_service import whatsapp_service
 
 app = FastAPI()
 
-# Get environment mode (default to 'test' if not set)
-env_raw = os.getenv("ENVIRONMENT", "test")
-ENVIRONMENT = env_raw.strip().lower() if env_raw else "test"
-
-# Debug: print raw environment variable
-print(f"DEBUG: ENVIRONMENT raw value: '{env_raw}'")
-print(f"DEBUG: ENVIRONMENT processed value: '{ENVIRONMENT}'")
-
-# Set N8N webhook URL based on environment
-if ENVIRONMENT == "prod":
-    N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook/whatsappout"
-else:
-    N8N_WEBHOOK_URL = "https://ninsights.app.n8n.cloud/webhook-test/whatsappout"
+# Get environment from service
+ENVIRONMENT = whatsapp_service.get_environment()
 
 # Print environment info at startup
 print(f"Starting WhatsApp Bot in '{ENVIRONMENT}' mode")
-print(f"N8N Webhook URL: {N8N_WEBHOOK_URL}")
 
 # רשימת מספרי טלפון לקבלת תשובה עם 3 אפשרויות
 SPECIAL_PHONE_NUMBERS = [
@@ -51,7 +38,7 @@ def get_info():
     return {
         "status": "ok",
         "environment": ENVIRONMENT,
-        "n8n_webhook_url": N8N_WEBHOOK_URL
+        "n8n_webhook_url": whatsapp_service.get_webhook_url()
     }
 
 @app.post("/whatsapp/get_message")
@@ -143,46 +130,23 @@ def _start_choice_process(phone_number: str):
     """
     response_text = "אנא בחר אחת מהאפשרויות:\nא. אפשרות א\nב. אפשרות ב\nג. אפשרות ג"
     
-    # שליחת התשובה דרך N8N
-    payload = {
-        "to": phone_number,
-        "text": response_text
-    }
-    
-    print(f"DEBUG: Sending choice process message to {phone_number}")
-    print(f"DEBUG: Payload: {payload}")
-    print(f"DEBUG: N8N Webhook URL: {N8N_WEBHOOK_URL}")
-    
-    try:
-        r = requests.post(N8N_WEBHOOK_URL, json=payload)
-        print(f"DEBUG: Response status: {r.status_code}")
-        print(f"DEBUG: Response text: {r.text}")
-        print(f"Sent special response to {phone_number}, status: {r.status_code}")
-    except Exception as e:
-        print(f"ERROR: Error sending response: {e}")
-        import traceback
-        traceback.print_exc()
+    # שליחת התשובה דרך שירות WhatsApp
+    result = whatsapp_service.send_message(phone_number, response_text)
+    print(f"Sent special response to {phone_number}, status: {result.get('status_code', 'N/A')}")
 
 
 @app.post("/whatsapp/send_message")
 def send_message():
     """
-    שולח הודעת WhatsApp דרך N8N
+    שולח הודעת WhatsApp דרך שירות WhatsApp
     """
-    payload = {
-        "to": "972542202468",
-        "text": "הודעה ישירות דרך n8n"
-    }
-
-    r = requests.post(N8N_WEBHOOK_URL, json=payload)
-
+    result = whatsapp_service.send_message("972542202468", "הודעה ישירות דרך n8n")
+    
     return {
-        "status": "sent",
+        "status": result.get("status", "error"),
         "environment": ENVIRONMENT,
-        "n8n_webhook_url": N8N_WEBHOOK_URL,
-        "n8n_status": r.status_code,
-        "n8n_response": r.text
+        "n8n_webhook_url": whatsapp_service.get_webhook_url(),
+        "n8n_status": result.get("status_code"),
+        "n8n_response": result.get("response_text")
     }
-
-
 

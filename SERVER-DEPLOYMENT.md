@@ -21,7 +21,7 @@ pip install -r requirements.txt
 # 3. Run with screen (recommended for simple setup)
 screen -S whatsapp-bot-test
 export ENVIRONMENT=test
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 # Press Ctrl+A then D to detach
 ```
 
@@ -29,7 +29,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```bash
 screen -S whatsapp-bot-prod
 export ENVIRONMENT=prod
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 # Press Ctrl+A then D to detach
 ```
 
@@ -59,7 +59,7 @@ lsof -i :8000
 ### Stop server
 ```bash
 # Find and kill process
-pkill -f "uvicorn main:app"
+pkill -f "uvicorn app.main:app"
 
 # Or find PID and kill
 ps aux | grep uvicorn
@@ -82,7 +82,7 @@ pm2 logs whatsapp-bot
 
 **Test Mode:**
 ```bash
-sudo cp whatsapp-bot-test.service.example /etc/systemd/system/whatsapp-bot-test.service
+sudo cp config/whatsapp-bot-test.service.example /etc/systemd/system/whatsapp-bot-test.service
 sudo nano /etc/systemd/system/whatsapp-bot-test.service
 # Edit paths: WorkingDirectory, User, PATH
 
@@ -94,7 +94,7 @@ sudo systemctl status whatsapp-bot-test
 
 **Production Mode:**
 ```bash
-sudo cp whatsapp-bot-prod.service.example /etc/systemd/system/whatsapp-bot-prod.service
+sudo cp config/whatsapp-bot-prod.service.example /etc/systemd/system/whatsapp-bot-prod.service
 sudo nano /etc/systemd/system/whatsapp-bot-prod.service
 # Edit paths: WorkingDirectory, User, PATH
 
@@ -113,7 +113,7 @@ npm install -g pm2
 
 2. Start with PM2:
 ```bash
-pm2 start ecosystem.config.js.example --name whatsapp-bot
+pm2 start config/ecosystem.config.js.example --name whatsapp-bot
 pm2 save
 pm2 startup
 ```

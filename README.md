@@ -26,21 +26,36 @@ pip install -r requirements.txt
 **Test Mode (default):**
 ```bash
 # Using the run script (sets ENVIRONMENT=test automatically):
-./run.sh
+./scripts/run.sh
 
 # Or manually:
 export ENVIRONMENT=test
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Production Mode:**
 ```bash
 # Using the production script (sets ENVIRONMENT=prod automatically):
-./run-production.sh
+./scripts/run-production.sh
 
 # Or manually:
 export ENVIRONMENT=prod
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+**Windows:**
+```powershell
+# PowerShell - Test mode
+.\scripts\run-test.ps1
+
+# PowerShell - Production mode
+.\scripts\run-production.ps1
+
+# CMD - Test mode
+scripts\run-test.bat
+
+# CMD - Production mode
+scripts\run-production.bat
 ```
 
 The API will be available at:
@@ -76,17 +91,17 @@ Once the server is running, visit:
 
 ```bash
 # Run in foreground
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Or use the run script
-./run.sh
+./scripts/run.sh
 ```
 
 ### Option 2: Run in Background with nohup
 
 ```bash
 # Run in background, output to nohup.out
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
 
 # Check if running
 ps aux | grep uvicorn
@@ -95,7 +110,7 @@ ps aux | grep uvicorn
 tail -f app.log
 
 # Stop the process
-pkill -f "uvicorn main:app"
+pkill -f "uvicorn app.main:app"
 ```
 
 ### Option 3: Run with screen (Recommended for simple deployments)
@@ -105,7 +120,7 @@ pkill -f "uvicorn main:app"
 screen -S whatsapp-bot
 
 # Run the server
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 # Detach: Press Ctrl+A then D
 # Reattach: screen -r whatsapp-bot
@@ -119,7 +134,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 tmux new -s whatsapp-bot
 
 # Run the server
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 # Detach: Press Ctrl+B then D
 # Reattach: tmux attach -t whatsapp-bot
@@ -132,7 +147,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 1. Copy and edit the test service file:
 ```bash
-sudo cp whatsapp-bot-test.service.example /etc/systemd/system/whatsapp-bot-test.service
+sudo cp config/whatsapp-bot-test.service.example /etc/systemd/system/whatsapp-bot-test.service
 sudo nano /etc/systemd/system/whatsapp-bot-test.service
 # Edit paths: WorkingDirectory, User, PATH
 ```
@@ -149,7 +164,7 @@ sudo systemctl status whatsapp-bot-test
 
 1. Copy and edit the production service file:
 ```bash
-sudo cp whatsapp-bot-prod.service.example /etc/systemd/system/whatsapp-bot-prod.service
+sudo cp config/whatsapp-bot-prod.service.example /etc/systemd/system/whatsapp-bot-prod.service
 sudo nano /etc/systemd/system/whatsapp-bot-prod.service
 # Edit paths: WorkingDirectory, User, PATH
 ```
@@ -186,7 +201,7 @@ sudo systemctl restart whatsapp-bot
 npm install -g pm2
 
 # Start the application
-pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name whatsapp-bot
+pm2 start "uvicorn app.main:app --host 0.0.0.0 --port 8000" --name whatsapp-bot
 
 # Save PM2 configuration
 pm2 save
