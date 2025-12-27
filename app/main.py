@@ -84,6 +84,11 @@ async def get_message(request: Request):
     
     print(f"DEBUG: Extracted phone_number: '{phone_number}'")
     print(f"DEBUG: SPECIAL_PHONE_NUMBERS list: {SPECIAL_PHONE_NUMBERS}")
+    print(f"DEBUG: phone_number type: {type(phone_number)}")
+    if phone_number:
+        print(f"DEBUG: phone_number repr: {repr(phone_number)}")
+        for idx, special_num in enumerate(SPECIAL_PHONE_NUMBERS):
+            print(f"DEBUG: Comparing '{phone_number}' (type: {type(phone_number)}) with '{special_num}' (type: {type(special_num)}) - Match: {phone_number == special_num}")
     
     # בדיקה אם זו הודעת טקסט או רק status update
     has_message = False
@@ -99,8 +104,8 @@ async def get_message(request: Request):
                         # בדיקה אם יש הודעת טקסט (לא רק status)
                         if "messages" in value and len(value["messages"]) > 0:
                             has_message = True
-    except (KeyError, IndexError, TypeError):
-        pass
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"DEBUG: Error checking has_message: {e}")
     
     print(f"DEBUG: has_message: {has_message}")
     
@@ -108,14 +113,20 @@ async def get_message(request: Request):
     if phone_number and has_message:
         phone_number_normalized = phone_number.replace(" ", "").replace("-", "").replace("+", "")
         print(f"DEBUG: Normalized phone_number: '{phone_number_normalized}'")
+        print(f"DEBUG: Checking if '{phone_number}' in SPECIAL_PHONE_NUMBERS: {phone_number in SPECIAL_PHONE_NUMBERS}")
+        print(f"DEBUG: Checking if '{phone_number_normalized}' in SPECIAL_PHONE_NUMBERS: {phone_number_normalized in SPECIAL_PHONE_NUMBERS}")
         
         # בדיקה אם המספר ברשימה המיוחדת (גם עם וגם בלי נורמליזציה)
         if phone_number in SPECIAL_PHONE_NUMBERS or phone_number_normalized in SPECIAL_PHONE_NUMBERS:
-            print(f"DEBUG: Phone number {phone_number} found in SPECIAL_PHONE_NUMBERS!")
+            print(f"DEBUG: ✓ Phone number {phone_number} found in SPECIAL_PHONE_NUMBERS!")
             # התחלת תהליך בחירה בין האפשרויות
             _start_choice_process(phone_number)
         else:
-            print(f"DEBUG: Phone number {phone_number} NOT in SPECIAL_PHONE_NUMBERS")
+            print(f"DEBUG: ✗ Phone number {phone_number} NOT in SPECIAL_PHONE_NUMBERS")
+            print(f"DEBUG: Comparison details:")
+            print(f"  - phone_number: '{phone_number}' (length: {len(phone_number)})")
+            print(f"  - phone_number_normalized: '{phone_number_normalized}' (length: {len(phone_number_normalized)})")
+            print(f"  - SPECIAL_PHONE_NUMBERS contains: {SPECIAL_PHONE_NUMBERS}")
     elif phone_number and not has_message:
         print("DEBUG: Phone number found but this is a status update, not a text message - skipping")
     else:
@@ -129,9 +140,11 @@ def _start_choice_process(phone_number: str):
     מתחיל תהליך בחירה בין 3 אפשרויות למספר טלפון מיוחד
     שולח הודעת Interactive Message עם 3 כפתורי בחירה
     """
+    print(f"DEBUG: _start_choice_process called with phone_number: '{phone_number}'")
     body_text = "אנא בחר אחת מהאפשרויות:"
     
     # שליחת הודעת Interactive עם כפתורי בחירה
+    print(f"DEBUG: Calling send_interactive_message...")
     result = whatsapp_service.send_interactive_message(
         phone_number=phone_number,
         body_text=body_text,
@@ -141,7 +154,10 @@ def _start_choice_process(phone_number: str):
             {"id": "option_c", "title": "ג. אפשרות ג"}
         ]
     )
+    print(f"DEBUG: send_interactive_message result: {result}")
     print(f"Sent interactive message to {phone_number}, status: {result.get('status_code', 'N/A')}")
+    if result.get('status') == 'error':
+        print(f"ERROR: Failed to send interactive message: {result.get('error', 'Unknown error')}")
 
 
 @app.post("/whatsapp/send_message")
