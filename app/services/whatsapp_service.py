@@ -36,8 +36,11 @@ class WhatsAppService:
             dict עם פרטי התגובה מהשרת
         """
         payload = {
+            "messaging_product": "whatsapp",
             "to": phone_number,
-            "text": text
+            "text": {
+                "body": text
+            }
         }
         
         print(f"DEBUG: Sending WhatsApp message to {phone_number}")
@@ -103,7 +106,9 @@ class WhatsAppService:
             })
         
         # בניית payload ל-Interactive Message
+        # פורמט WhatsApp Business API
         payload = {
+            "messaging_product": "whatsapp",
             "to": phone_number,
             "type": "interactive",
             "interactive": {
