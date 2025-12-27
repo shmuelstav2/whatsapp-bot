@@ -92,6 +92,7 @@ async def get_message(request: Request):
     
     # בדיקה אם זו הודעת טקסט או רק status update
     has_message = False
+    has_status = False
     try:
         if "body" in data:
             body = data["body"]
@@ -101,13 +102,21 @@ async def get_message(request: Request):
                     changes = entry["changes"][0]
                     if "value" in changes:
                         value = changes["value"]
+                        print(f"DEBUG: value keys: {value.keys() if isinstance(value, dict) else 'not a dict'}")
                         # בדיקה אם יש הודעת טקסט (לא רק status)
                         if "messages" in value and len(value["messages"]) > 0:
                             has_message = True
+                            print(f"DEBUG: Found messages in value, count: {len(value['messages'])}")
+                        # בדיקה אם יש status
+                        if "statuses" in value and len(value["statuses"]) > 0:
+                            has_status = True
+                            print(f"DEBUG: Found statuses in value, count: {len(value['statuses'])}")
     except (KeyError, IndexError, TypeError) as e:
         print(f"DEBUG: Error checking has_message: {e}")
+        import traceback
+        traceback.print_exc()
     
-    print(f"DEBUG: has_message: {has_message}")
+    print(f"DEBUG: has_message: {has_message}, has_status: {has_status}")
     
     # נורמליזציה של מספר הטלפון (הסרת רווחים, +, וכו')
     if phone_number and has_message:
@@ -128,7 +137,16 @@ async def get_message(request: Request):
             print(f"  - phone_number_normalized: '{phone_number_normalized}' (length: {len(phone_number_normalized)})")
             print(f"  - SPECIAL_PHONE_NUMBERS contains: {SPECIAL_PHONE_NUMBERS}")
     elif phone_number and not has_message:
-        print("DEBUG: Phone number found but this is a status update, not a text message - skipping")
+        if has_status:
+            print("DEBUG: Phone number found but this is a status update, not a text message - skipping")
+        else:
+            print("DEBUG: Phone number found but has_message is False and has_status is False - this shouldn't happen!")
+            print("DEBUG: Full data structure:")
+            try:
+                import json
+                print(json.dumps(data, indent=2, default=str))
+            except:
+                print(str(data))
     else:
         print("DEBUG: No phone number found in message data")
 
