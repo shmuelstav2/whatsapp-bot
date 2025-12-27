@@ -106,7 +106,13 @@ async def get_message(request: Request):
                         # בדיקה אם יש הודעת טקסט (לא רק status)
                         if "messages" in value and len(value["messages"]) > 0:
                             has_message = True
-                            print(f"DEBUG: Found messages in value, count: {len(value['messages'])}")
+                            messages = value["messages"]
+                            print(f"DEBUG: ✓ Found {len(messages)} message(s) in value")
+                            # הדפסת פרטי ההודעה הראשונה
+                            if len(messages) > 0:
+                                first_msg = messages[0]
+                                print(f"DEBUG: First message type: {first_msg.get('type', 'unknown')}")
+                                print(f"DEBUG: First message keys: {first_msg.keys() if isinstance(first_msg, dict) else 'not a dict'}")
                         # בדיקה אם יש status
                         if "statuses" in value and len(value["statuses"]) > 0:
                             has_status = True
@@ -127,7 +133,8 @@ async def get_message(request: Request):
         
         # בדיקה אם המספר ברשימה המיוחדת (גם עם וגם בלי נורמליזציה)
         if phone_number in SPECIAL_PHONE_NUMBERS or phone_number_normalized in SPECIAL_PHONE_NUMBERS:
-            print(f"DEBUG: ✓ Phone number {phone_number} found in SPECIAL_PHONE_NUMBERS!")
+            print(f"DEBUG: ✓✓✓ Phone number {phone_number} found in SPECIAL_PHONE_NUMBERS!")
+            print(f"DEBUG: ✓✓✓ Starting choice process - will send interactive message with buttons")
             # התחלת תהליך בחירה בין האפשרויות
             _start_choice_process(phone_number)
         else:
@@ -138,9 +145,10 @@ async def get_message(request: Request):
             print(f"  - SPECIAL_PHONE_NUMBERS contains: {SPECIAL_PHONE_NUMBERS}")
     elif phone_number and not has_message:
         if has_status:
-            print("DEBUG: Phone number found but this is a status update, not a text message - skipping")
+            print("DEBUG: ⚠️ Phone number found but this is a STATUS UPDATE (read/delivered), not a TEXT MESSAGE")
+            print("DEBUG: ℹ️  To trigger the interactive message, please send a NEW TEXT MESSAGE (not just read a message)")
         else:
-            print("DEBUG: Phone number found but has_message is False and has_status is False - this shouldn't happen!")
+            print("DEBUG: ⚠️ Phone number found but has_message is False and has_status is False - this shouldn't happen!")
             print("DEBUG: Full data structure:")
             try:
                 import json
