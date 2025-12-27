@@ -52,6 +52,11 @@ async def get_message(request: Request):
     print(data)
     print("=" * 50)
     
+    # בדיקה מה webhook URL שמגיע
+    webhook_url = data.get("webhookUrl", "N/A")
+    print(f"DEBUG: webhookUrl from data: {webhook_url}")
+    print(f"DEBUG: This webhook should receive INCOMING messages")
+    
     # הדפסת המבנה המלא של הנתונים
     try:
         import json
