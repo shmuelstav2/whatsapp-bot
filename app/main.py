@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.whatsapp_service import whatsapp_service
+from app.services.flow_manager import flow_manager
 
 app = FastAPI()
 
@@ -147,6 +148,11 @@ async def get_message(request: Request):
                                     print(json.dumps(first_msg, indent=2, default=str, ensure_ascii=False))
                                 except:
                                     print(str(first_msg))
+                                
+                                # טיפול בהודעה דרך flow_manager (רק אם המספר ברשימה המיוחדת)
+                                phone_number_normalized = phone_number.replace(" ", "").replace("-", "").replace("+", "")
+                                if phone_number in SPECIAL_PHONE_NUMBERS or phone_number_normalized in SPECIAL_PHONE_NUMBERS:
+                                    _handle_user_message(phone_number, first_msg)
                         else:
                             print("DEBUG: ✗ No 'messages' key in value or messages list is empty")
                         
@@ -179,11 +185,10 @@ async def get_message(request: Request):
         print(f"DEBUG: Checking if '{phone_number_normalized}' in SPECIAL_PHONE_NUMBERS: {phone_number_normalized in SPECIAL_PHONE_NUMBERS}")
         
         # בדיקה אם המספר ברשימה המיוחדת (גם עם וגם בלי נורמליזציה)
+        # הערה: הטיפול בהודעות מתבצע ב-_handle_user_message
         if phone_number in SPECIAL_PHONE_NUMBERS or phone_number_normalized in SPECIAL_PHONE_NUMBERS:
             print(f"DEBUG: ✓✓✓ Phone number {phone_number} found in SPECIAL_PHONE_NUMBERS!")
-            print(f"DEBUG: ✓✓✓ Starting choice process - will send interactive message with buttons")
-            # התחלת תהליך בחירה בין האפשרויות
-            _start_choice_process(phone_number)
+            # הטיפול מתבצע ב-_handle_user_message
         else:
             print(f"DEBUG: ✗ Phone number {phone_number} NOT in SPECIAL_PHONE_NUMBERS")
             print(f"DEBUG: Comparison details:")
@@ -208,24 +213,74 @@ async def get_message(request: Request):
     return {"status": "ok"}
 
 
+def _handle_user_message(phone_number: str, message: dict):
+    """
+    מטפל בהודעה מהמשתמש - חילוץ choice_id או text ושימוש ב-flow_manager
+    """
+    from app.services.flow_manager import FlowState
+    
+    message_type = message.get("type", "")
+    choice_id = None
+    message_text = ""
+    
+    # חילוץ choice_id אם זו בחירה מ-interactive message
+    if message_type == "interactive":
+        interactive = message.get("interactive", {})
+        interactive_type = interactive.get("type", "")
+        if interactive_type == "list_reply":
+            choice_id = interactive.get("list_reply", {}).get("id")
+        elif interactive_type == "button_reply":
+            choice_id = interactive.get("button_reply", {}).get("id")
+        print(f"DEBUG: Interactive message detected, choice_id: {choice_id}")
+    
+    # חילוץ טקסט אם זו הודעת טקסט רגילה
+    elif message_type == "text":
+        message_text = message.get("text", {}).get("body", "")
+        print(f"DEBUG: Text message detected, text: '{message_text}'")
+    
+    # בדיקה אם צריך להתחיל flow חדש (אם המשתמש במצב IDLE וזו הודעה חדשה)
+    current_state = flow_manager.get_user_state(phone_number)
+    if current_state == FlowState.IDLE and message_type == "text" and message_text:
+        # אם המשתמש במצב IDLE ושולח הודעה, נשלח לו את הרשימה הראשונית
+        print(f"DEBUG: User in IDLE state, sending initial choices")
+        _start_choice_process(phone_number)
+        return
+    
+    # עיבוד ההודעה דרך flow_manager
+    print(f"DEBUG: Processing message through flow_manager: choice_id={choice_id}, text='{message_text}'")
+    response_text, next_payload = flow_manager.process_message(phone_number, choice_id, message_text)
+    
+    # שליחת תשובה למשתמש
+    if response_text:
+        print(f"DEBUG: Sending response to user: '{response_text}'")
+        whatsapp_service.send_message(phone_number, response_text)
+    
+    # אם יש next_payload (למשל interactive message נוסף), לשלוח אותו
+    if next_payload:
+        print(f"DEBUG: Sending next interactive message")
+        # כאן אפשר לשלוח interactive message נוסף אם צריך
+
+
 def _start_choice_process(phone_number: str):
     """
-    מתחיל תהליך בחירה בין 3 אפשרויות למספר טלפון מיוחד
-    שולח הודעת Interactive Message עם 3 כפתורי בחירה
+    מתחיל תהליך בחירה בין אפשרויות למספר טלפון מיוחד
+    שולח הודעת Interactive List Message עם רשימת אפשרויות
     """
     print(f"DEBUG: _start_choice_process called with phone_number: '{phone_number}'")
-    body_text = "אנא בחר אחת מהאפשרויות:"
+    body_text = "בחר אחת מהאפשרויות הבאות:"
     
-    # שליחת הודעת Interactive עם כפתורי בחירה
+    # שליחת הודעת Interactive List עם כל האפשרויות
     print(f"DEBUG: Calling send_interactive_message...")
     result = whatsapp_service.send_interactive_message(
         phone_number=phone_number,
         body_text=body_text,
         options=[
-            {"id": "option_a", "title": "א. אפשרות א"},
-            {"id": "option_b", "title": "ב. אפשרות ב"},
-            {"id": "option_c", "title": "ג. אפשרות ג"}
-        ]
+            {"id": "proposal_for_discussion", "title": "מצע לדיון"},
+            {"id": "new_reminder", "title": "תזכורת חדשה"},
+            {"id": "control_and_monitoring", "title": "בקרה ומעקב"},
+            {"id": "new_task", "title": "משימה חדשה"}
+        ],
+        button_text="בחר אפשרות"
     )
     print(f"DEBUG: send_interactive_message result: {result}")
     print(f"Sent interactive message to {phone_number}, status: {result.get('status_code', 'N/A')}")

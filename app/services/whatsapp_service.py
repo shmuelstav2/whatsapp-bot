@@ -71,17 +71,19 @@ class WhatsAppService:
             }
     
     def send_interactive_message(self, phone_number: str, body_text: str, 
-                                 options=None) -> dict:
+                                 options=None, button_text="בחר אפשרות") -> dict:
         """
-        שולח הודעת WhatsApp Interactive עם כפתורי בחירה
+        שולח הודעת WhatsApp Interactive List עם רשימת אפשרויות
         
         Args:
             phone_number: מספר הטלפון של הנמען
             body_text: הטקסט הראשי של ההודעה
             options: רשימה של אפשרויות. כל אפשרות היא dict עם:
-                    - "id": מזהים ייחודיים (למשל "option_a")
-                    - "title": טקסט הכפתור (למשל "א. אפשרות א")
-                    אם לא מסופק, ישתמש ב-3 אפשרויות ברירת מחדל
+                    - "id": מזהים ייחודיים (למשל "proposal_for_discussion")
+                    - "title": כותרת האפשרות (למשל "מצע לדיון")
+                    - "description": תיאור אופציונלי (לא חובה)
+                    אם לא מסופק, ישתמש ב-4 אפשרויות ברירת מחדל
+            button_text: טקסט הכפתור (ברירת מחדל: "בחר אפשרות")
             
         Returns:
             dict עם פרטי התגובה מהשרת
@@ -89,35 +91,43 @@ class WhatsAppService:
         # אפשרויות ברירת מחדל
         if options is None:
             options = [
-                {"id": "option_a", "title": "א. אפשרות א"},
-                {"id": "option_b", "title": "ב. אפשרות ב"},
-                {"id": "option_c", "title": "ג. אפשרות ג"}
+                {"id": "proposal_for_discussion", "title": "מצע לדיון"},
+                {"id": "new_reminder", "title": "תזכורת חדשה"},
+                {"id": "control_and_monitoring", "title": "בקרה ומעקב"},
+                {"id": "new_task", "title": "משימה חדשה"}
             ]
         
-        # בניית כפתורים
-        buttons = []
+        # בניית rows (שורות) עבור List Message
+        rows = []
         for option in options:
-            buttons.append({
-                "type": "reply",
-                "reply": {
-                    "id": option["id"],
-                    "title": option["title"]
-                }
-            })
+            row = {
+                "id": option["id"],
+                "title": option["title"]
+            }
+            # הוספת description אם קיים
+            if "description" in option:
+                row["description"] = option["description"]
+            rows.append(row)
         
-        # בניית payload ל-Interactive Message
-        # פורמט WhatsApp Business API
+        # בניית payload ל-Interactive List Message
+        # פורמט WhatsApp Business API - List Message
         payload = {
             "messaging_product": "whatsapp",
             "to": phone_number,
             "type": "interactive",
             "interactive": {
-                "type": "button",
+                "type": "list",
                 "body": {
                     "text": body_text
                 },
                 "action": {
-                    "buttons": buttons
+                    "button": button_text,
+                    "sections": [
+                        {
+                            "title": "אפשרויות",
+                            "rows": rows
+                        }
+                    ]
                 }
             }
         }
