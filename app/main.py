@@ -240,11 +240,18 @@ def _handle_user_message(phone_number: str, message: dict):
     
     # בדיקה אם צריך להתחיל flow חדש (אם המשתמש במצב IDLE וזו הודעה חדשה)
     current_state = flow_manager.get_user_state(phone_number)
+    print(f"DEBUG: Current user state: {current_state}, message_type: {message_type}, has_text: {bool(message_text)}")
+    
     if current_state == FlowState.IDLE and message_type == "text" and message_text:
         # אם המשתמש במצב IDLE ושולח הודעה, נשלח לו את הרשימה הראשונית
         print(f"DEBUG: User in IDLE state, sending initial choices")
         _start_choice_process(phone_number)
         return
+    
+    # אם המשתמש במצב IDLE ובחר אפשרות מה-List, זה יטופל ב-process_message
+    if current_state == FlowState.IDLE and choice_id:
+        print(f"DEBUG: User in IDLE state, processing choice: {choice_id}")
+        # ימשיך ל-process_message למטה
     
     # עיבוד ההודעה דרך flow_manager
     print(f"DEBUG: Processing message through flow_manager: choice_id={choice_id}, text='{message_text}'")

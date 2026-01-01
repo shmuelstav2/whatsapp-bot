@@ -37,6 +37,7 @@ class FlowManager:
     def set_user_state(self, phone_number: str, state: FlowState):
         """מגדיר מצב חדש למשתמש"""
         self.user_states[phone_number] = state
+        print(f"DEBUG flow_manager: Set state for {phone_number} to {state}")
     
     def get_user_data(self, phone_number: str) -> Dict:
         """מחזיר את הנתונים שנאספו מהמשתמש"""
@@ -168,25 +169,34 @@ class FlowManager:
         Returns: (response_text, next_message_payload)
         """
         current_state = self.get_user_state(phone_number)
+        print(f"DEBUG flow_manager: Processing message - phone: {phone_number}, state: {current_state}, choice_id: {choice_id}, text: '{message_text}'")
         
-        # אם זו בחירה ראשונית (choice_id קיים)
+        # אם זו בחירה ראשונית (choice_id קיים והמשתמש במצב IDLE)
         if choice_id and current_state == FlowState.IDLE:
+            print(f"DEBUG flow_manager: Handling initial choice: {choice_id}")
             return self.handle_initial_choice(phone_number, choice_id)
         
         # טיפול לפי המצב הנוכחי
         if current_state == FlowState.PROPOSAL_CHOICE:
+            print(f"DEBUG flow_manager: Handling PROPOSAL_CHOICE state")
             return self.handle_proposal_choice(phone_number, choice_id or "", message_text)
         elif current_state == FlowState.PROPOSAL_NEW_NAME:
+            print(f"DEBUG flow_manager: Handling PROPOSAL_NEW_NAME state")
             return self.handle_proposal_name(phone_number, message_text)
         elif current_state == FlowState.PROPOSAL_NEW_PARTICIPANTS:
+            print(f"DEBUG flow_manager: Handling PROPOSAL_NEW_PARTICIPANTS state")
             return self.handle_proposal_participants(phone_number, message_text)
         elif current_state == FlowState.PROPOSAL_NEW_CONTENT:
+            print(f"DEBUG flow_manager: Handling PROPOSAL_NEW_CONTENT state")
             return self.handle_proposal_content(phone_number, message_text)
         else:
-            # מצב IDLE או לא מזוהה
+            # מצב IDLE או לא מזוהה - אם יש choice_id, נטפל בו
             if choice_id:
+                print(f"DEBUG flow_manager: State is {current_state}, but choice_id provided, handling as initial choice")
                 return self.handle_initial_choice(phone_number, choice_id)
             else:
+                print(f"DEBUG flow_manager: State is {current_state}, no choice_id, sending initial message")
+                # אם המשתמש במצב לא מזוהה, נשלח לו את הרשימה הראשונית
                 return "אנא בחר אחת מהאפשרויות", None
 
 
